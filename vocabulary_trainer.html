@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>7.2 Vokabeln lernen</title>
+  <style>
+    :root {
+      --bg: #0c0d0f;
+      --surface: #171a1f;
+      --surface-2: #1d2127;
+      --border: #2a2f37;
+      --text: #eceff4;
+      --muted: #a9b0ba;
+      --shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+      --radius: 14px;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    h1 {
+      margin: 14px 16px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #d8dde6;
+      letter-spacing: 0.2px;
+    }
+
+    main {
+      min-height: calc(100vh - 70px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    .panel {
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+      background: linear-gradient(180deg, var(--surface), var(--surface-2));
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 2px);
+      box-shadow: var(--shadow);
+      padding: 28px 24px;
+    }
+
+    #wordText,
+    #practiceWordText {
+      font-size: clamp(2rem, 6vw, 3rem);
+      font-weight: 700;
+      margin: 14px 0 22px;
+      line-height: 1.2;
+      color: #f8fafc;
+      letter-spacing: 0.3px;
+    }
+
+    #directionText,
+    #progressText,
+    #resultText,
+    #finalScoreText,
+    #practiceDirectionText,
+    #practiceInfoText,
+    #practiceResultText,
+    #practiceSelectInfo {
+      margin: 8px 0;
+      color: var(--muted);
+    }
+
+    input,
+    button {
+      font: inherit;
+      padding: 12px 14px;
+      margin-top: 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      background: #12151a;
+      color: var(--text);
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #505867;
+      box-shadow: 0 0 0 2px rgba(138, 148, 163, 0.16);
+    }
+
+    button {
+      min-width: 160px;
+      cursor: pointer;
+      background: #262b33;
+      color: var(--text);
+      transition: background 0.2s ease, transform 0.06s ease, border-color 0.2s ease;
+    }
+
+    button:hover {
+      background: #2e3540;
+      border-color: #3c4552;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .menu-buttons {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .checklist {
+      text-align: left;
+      max-height: 320px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px;
+      background: #12151a;
+      margin-top: 12px;
+    }
+
+    .checklist label {
+      display: block;
+      margin: 6px 0;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .checklist input[type="checkbox"] {
+      width: auto;
+      margin-right: 8px;
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>7.2 Vokabeln lernen</h1>
+
+  <main>
+    <section class="panel">
+      <div id="menuScreen">
+        <div class="menu-buttons">
+          <button id="startTestButton" type="button">Test starten</button>
+          <button id="openPracticeButton" type="button">Übungsmodus</button>
+        </div>
+      </div>
+
+      <div id="testScreen" class="hidden">
+        <p id="progressText"></p>
+        <p id="directionText"></p>
+        <p id="wordText"></p>
+        <input id="answerInput" type="text" placeholder="Antwort eingeben">
+        <p id="resultText" class="hidden"></p>
+        <button id="actionButton" type="button">Prüfen</button>
+      </div>
+
+      <div id="practiceSelectionScreen" class="hidden">
+        <p>Wähle Vokabeln für den Übungsmodus:</p>
+        <div id="practiceChecklist" class="checklist"></div>
+        <p id="practiceSelectInfo"></p>
+        <button id="startPracticeButton" type="button">Übung starten</button>
+        <button id="backFromSelectionButton" type="button">Zurück zum Menü</button>
+      </div>
+
+      <div id="practiceScreen" class="hidden">
+        <p id="practiceInfoText">Übungsmodus</p>
+        <p id="practiceDirectionText"></p>
+        <p id="practiceWordText"></p>
+        <input id="practiceAnswerInput" type="text" placeholder="Antwort eingeben">
+        <p id="practiceResultText" class="hidden"></p>
+        <button id="practiceActionButton" type="button">Prüfen</button>
+        <button id="exitPracticeButton" type="button">Zurück zum Menü</button>
+      </div>
+
+      <div id="endScreen" class="hidden">
+        <p id="finalScoreText"></p>
+        <button id="restartButton" type="button">Neuer Test</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Vocabulary data with default weight = 1.
+    // Weights stay in memory and persist between test sessions.
+    const vocabularyList = [
+      { en: "cobble", de: "Pflasterstein", weight: 1 },
+      { en: "collapse", de: "einstürzen", weight: 1 },
+      { en: "complain", de: "sich beklagen", weight: 1 },
+      { en: "confine", de: "einsperren", weight: 1 },
+      { en: "consist of", de: "bestehen aus", weight: 1 },
+      { en: "conspicuous", de: "auffällig", weight: 1 },
+      { en: "contain", de: "enthalten", weight: 1 },
+      { en: "content", de: "Inhalt", weight: 1 },
+      { en: "curator", de: "Museumsmitarbeiter/in", weight: 1 },
+      { en: "curtain", de: "Vorhang", weight: 1 },
+      { en: "daisy", de: "Gänseblümchen", weight: 1 },
+      { en: "debris", de: "Trümmer", weight: 1 },
+      { en: "despair", de: "verzweifeln", weight: 1 },
+      { en: "desperate", de: "verzweifelt", weight: 1 },
+      { en: "destroy", de: "zerstören", weight: 1 },
+      { en: "dew", de: "Tau", weight: 1 },
+      { en: "disappear", de: "verschwinden", weight: 1 },
+      { en: "disc", de: "Scheibe", weight: 1 },
+      { en: "disgusting", de: "widerlich", weight: 1 },
+      { en: "display case", de: "Vitrine", weight: 1 },
+      { en: "distract", de: "ablenken", weight: 1 },
+      { en: "disturb", de: "stören", weight: 1 },
+      { en: "dodge", de: "ausweichen", weight: 1 },
+      { en: "drag", de: "ziehen", weight: 1 },
+      { en: "drains", de: "Kanalisation", weight: 1 },
+      { en: "dust", de: "Staub", weight: 1 },
+      { en: "emerge", de: "herauskommen", weight: 1 },
+      { en: "entire", de: "ganz", weight: 1 },
+      { en: "exhibit", de: "Ausstellungsstück", weight: 1 },
+      { en: "extraordinary", de: "außergewöhnlich", weight: 1 },
+      { en: "fail", de: "versagen", weight: 1 },
+      { en: "flare", de: "Feuer", weight: 1 }
+    ];
+
+    // UI element references
+    const menuScreen = document.getElementById("menuScreen");
+    const testScreen = document.getElementById("testScreen");
+    const practiceSelectionScreen = document.getElementById("practiceSelectionScreen");
+    const practiceScreen = document.getElementById("practiceScreen");
+    const endScreen = document.getElementById("endScreen");
+    const startTestButton = document.getElementById("startTestButton");
+    const openPracticeButton = document.getElementById("openPracticeButton");
+    const startPracticeButton = document.getElementById("startPracticeButton");
+    const backFromSelectionButton = document.getElementById("backFromSelectionButton");
+    const exitPracticeButton = document.getElementById("exitPracticeButton");
+    const restartButton = document.getElementById("restartButton");
+    const actionButton = document.getElementById("actionButton");
+    const answerInput = document.getElementById("answerInput");
+    const progressText = document.getElementById("progressText");
+    const directionText = document.getElementById("directionText");
+    const wordText = document.getElementById("wordText");
+    const resultText = document.getElementById("resultText");
+    const finalScoreText = document.getElementById("finalScoreText");
+    const practiceChecklist = document.getElementById("practiceChecklist");
+    const practiceSelectInfo = document.getElementById("practiceSelectInfo");
+    const practiceInfoText = document.getElementById("practiceInfoText");
+    const practiceDirectionText = document.getElementById("practiceDirectionText");
+    const practiceWordText = document.getElementById("practiceWordText");
+    const practiceAnswerInput = document.getElementById("practiceAnswerInput");
+    const practiceResultText = document.getElementById("practiceResultText");
+    const practiceActionButton = document.getElementById("practiceActionButton");
+
+    // Test state handling
+    const totalQuestions = 10;
+    let currentWord = null;
+    let askGermanToEnglish = true;
+    let questionNumber = 0;
+    let score = 0;
+    let wrongWords = [];
+    let waitingForNext = false;
+    let testWords = [];
+
+    // Practice state handling
+    let practiceWords = [];
+    let practiceIndex = 0;
+    let practiceCurrentWord = null;
+    let practiceAskGermanToEnglish = true;
+    let practiceWaitingForNext = false;
+
+    // UI state switching (MENU / TEST / PRACTICE_SELECTION / PRACTICE / END)
+    function showMenuScreen() {
+      menuScreen.classList.remove("hidden");
+      testScreen.classList.add("hidden");
+      practiceSelectionScreen.classList.add("hidden");
+      practiceScreen.classList.add("hidden");
+      endScreen.classList.add("hidden");
+    }
+
+    function showTestScreen() {
+      menuScreen.classList.add("hidden");
+      testScreen.classList.remove("hidden");
+      practiceSelectionScreen.classList.add("hidden");
+      practiceScreen.classList.add("hidden");
+      endScreen.classList.add("hidden");
+    }
+
+    function showPracticeSelectionScreen() {
+      menuScreen.classList.add("hidden");
+      testScreen.classList.add("hidden");
+      practiceSelectionScreen.classList.remove("hidden");
+      practiceScreen.classList.add("hidden");
+      endScreen.classList.add("hidden");
+    }
+
+    function showPracticeScreen() {
+      menuScreen.classList.add("hidden");
+      testScreen.classList.add("hidden");
+      practiceSelectionScreen.classList.add("hidden");
+      practiceScreen.classList.remove("hidden");
+      endScreen.classList.add("hidden");
+    }
+
+    function showEndScreen() {
+      menuScreen.classList.add("hidden");
+      testScreen.classList.add("hidden");
+      practiceSelectionScreen.classList.add("hidden");
+      practiceScreen.classList.add("hidden");
+      endScreen.classList.remove("hidden");
+    }
+
+    // Weighted selection logic:
+    // Pick one word randomly using each word's weight.
+    function pickWordByWeight(pool) {
+      const totalWeight = pool.reduce((sum, word) => sum + word.weight, 0);
+      let randomValue = Math.random() * totalWeight;
+
+      for (const word of pool) {
+        randomValue -= word.weight;
+        if (randomValue <= 0) {
+          return word;
+        }
+      }
+
+      return pool[pool.length - 1];
+    }
+
+    // Build one fixed list of unique test words before test starts.
+    // This uses weighted random selection without duplicates.
+    function buildTestWords(count) {
+      const pool = vocabularyList.slice();
+      const selected = [];
+
+      while (selected.length < count && pool.length > 0) {
+        const chosenWord = pickWordByWeight(pool);
+        selected.push(chosenWord);
+
+        // Remove chosen item so it cannot appear again in this test.
+        const chosenIndex = pool.indexOf(chosenWord);
+        pool.splice(chosenIndex, 1);
+      }
+
+      return selected;
+    }
+
+    function loadQuestion() {
+      currentWord = testWords[questionNumber - 1];
+      askGermanToEnglish = Math.random() < 0.5;
+      waitingForNext = false;
+
+      progressText.textContent = "Frage " + questionNumber + " / " + totalQuestions;
+      directionText.textContent = askGermanToEnglish ? "Deutsch -> Englisch" : "Englisch -> Deutsch";
+      wordText.textContent = askGermanToEnglish ? currentWord.de : currentWord.en;
+      answerInput.value = "";
+      resultText.textContent = "";
+      resultText.classList.add("hidden");
+      actionButton.textContent = "Prüfen";
+      answerInput.disabled = false;
+      answerInput.focus();
+    }
+
+    // Scoring + answer check:
+    // correct = +1 point, wrong = +0 and weight +2
+    function checkCurrentAnswer() {
+      const userAnswer = answerInput.value.trim().toLowerCase();
+      const correctAnswer = askGermanToEnglish
+        ? currentWord.en.toLowerCase()
+        : currentWord.de.toLowerCase();
+
+      if (userAnswer === correctAnswer) {
+        score += 1;
+        resultText.textContent = "Richtig";
+      } else {
+        currentWord.weight += 2;
+        wrongWords.push(currentWord);
+        resultText.textContent = "Falsch, richtig wäre: " + (askGermanToEnglish ? currentWord.en : currentWord.de);
+      }
+
+      // UI feedback state: show result and switch action to "Weiter"
+      resultText.classList.remove("hidden");
+      waitingForNext = true;
+      actionButton.textContent = "Weiter";
+      answerInput.disabled = true;
+    }
+
+    function finishTest() {
+      finalScoreText.textContent = score + " / " + totalQuestions + " richtig";
+      showEndScreen();
+    }
+
+    function startTest() {
+      // New test resets score/question count, but keeps weights.
+      questionNumber = 1;
+      score = 0;
+      wrongWords = [];
+      testWords = buildTestWords(totalQuestions);
+      showTestScreen();
+      loadQuestion();
+    }
+
+    function handleActionButton() {
+      if (!waitingForNext) {
+        checkCurrentAnswer();
+      } else {
+        if (questionNumber >= totalQuestions) {
+          finishTest();
+        } else {
+          questionNumber += 1;
+          loadQuestion();
+        }
+      }
+    }
+
+    // Build checklist for practice mode selection
+    function renderPracticeChecklist() {
+      practiceChecklist.innerHTML = "";
+
+      vocabularyList.forEach(function (word, index) {
+        const label = document.createElement("label");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = String(index);
+        label.appendChild(checkbox);
+        label.appendChild(document.createTextNode(word.de + " - " + word.en));
+        practiceChecklist.appendChild(label);
+      });
+    }
+
+    // Selected vocabulary filtering for practice mode
+    function getSelectedPracticeWords() {
+      const selected = [];
+      const checkboxes = practiceChecklist.querySelectorAll("input[type='checkbox']");
+
+      checkboxes.forEach(function (checkbox) {
+        if (checkbox.checked) {
+          selected.push(vocabularyList[Number(checkbox.value)]);
+        }
+      });
+
+      return selected;
+    }
+
+    // Practice loop logic: fixed order, endless loop over selected words
+    function loadPracticeWord() {
+      practiceCurrentWord = practiceWords[practiceIndex];
+      practiceAskGermanToEnglish = Math.random() < 0.5;
+      practiceWaitingForNext = false;
+
+      practiceInfoText.textContent = "Übungsmodus";
+      practiceDirectionText.textContent = practiceAskGermanToEnglish ? "Deutsch -> Englisch" : "Englisch -> Deutsch";
+      practiceWordText.textContent = practiceAskGermanToEnglish ? practiceCurrentWord.de : practiceCurrentWord.en;
+      practiceAnswerInput.value = "";
+      practiceAnswerInput.disabled = false;
+      practiceResultText.textContent = "";
+      practiceResultText.classList.add("hidden");
+      practiceActionButton.textContent = "Prüfen";
+      practiceAnswerInput.focus();
+    }
+
+    function checkPracticeAnswer() {
+      const userAnswer = practiceAnswerInput.value.trim().toLowerCase();
+      const correctAnswer = practiceAskGermanToEnglish
+        ? practiceCurrentWord.en.toLowerCase()
+        : practiceCurrentWord.de.toLowerCase();
+
+      if (userAnswer === correctAnswer) {
+        practiceResultText.textContent = "Richtig";
+      } else {
+        practiceResultText.textContent = "Falsch, richtig wäre: " + (practiceAskGermanToEnglish ? practiceCurrentWord.en : practiceCurrentWord.de);
+      }
+
+      practiceResultText.classList.remove("hidden");
+      practiceWaitingForNext = true;
+      practiceActionButton.textContent = "Weiter";
+      practiceAnswerInput.disabled = true;
+    }
+
+    function handlePracticeAction() {
+      if (!practiceWaitingForNext) {
+        checkPracticeAnswer();
+      } else {
+        practiceIndex = (practiceIndex + 1) % practiceWords.length;
+        loadPracticeWord();
+      }
+    }
+
+    function startPractice() {
+      practiceWords = getSelectedPracticeWords();
+      if (practiceWords.length === 0) {
+        practiceSelectInfo.textContent = "Bitte mindestens eine Vokabel auswählen.";
+        return;
+      }
+
+      practiceSelectInfo.textContent = "";
+      practiceIndex = 0;
+      showPracticeScreen();
+      loadPracticeWord();
+    }
+
+    // Mode switching events
+    startTestButton.addEventListener("click", startTest);
+    openPracticeButton.addEventListener("click", function () {
+      showPracticeSelectionScreen();
+    });
+    startPracticeButton.addEventListener("click", startPractice);
+    backFromSelectionButton.addEventListener("click", function () {
+      showMenuScreen();
+    });
+    exitPracticeButton.addEventListener("click", function () {
+      showMenuScreen();
+    });
+    restartButton.addEventListener("click", startTest);
+    actionButton.addEventListener("click", handleActionButton);
+    practiceActionButton.addEventListener("click", handlePracticeAction);
+
+    answerInput.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter") {
+        return;
+      }
+
+      if (!waitingForNext) {
+        checkCurrentAnswer();
+      } else {
+        handleActionButton();
+      }
+    });
+
+    practiceAnswerInput.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter") {
+        return;
+      }
+
+      handlePracticeAction();
+    });
+
+    // Initial page state
+    renderPracticeChecklist();
+    showMenuScreen();
+  </script>
+</body>
+</html>
